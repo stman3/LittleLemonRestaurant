@@ -1,5 +1,6 @@
 from django.urls import path
-from . import views
+from .views import ListUsers
 
-
-urlpatterns = []
+urlpatterns = [
+    path("list-users/", ListUsers.as_view(), name="list-users"),
+]
