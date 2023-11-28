@@ -19,7 +19,8 @@ class MunuItemSerializers(serializers.ModelSerializer):
 
 class CartSerializers(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(), default=serializers.CurrentUserDefault()
+        queryset=User.objects.all(),
+        default=serializers.CurrentUserDefault(),
     )
 
     def validate(self, attrs):
