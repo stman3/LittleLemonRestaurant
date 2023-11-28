@@ -53,5 +53,3 @@ class CartView(APIView):
     def delete(self, request):
         Cart.objects.filter(user=self.request.user).delete()
         return Response("OK")
-
-    pass
