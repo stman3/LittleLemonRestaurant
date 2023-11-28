@@ -12,27 +12,6 @@ from .serializers import (
 )
 
 
-class ListUsers(APIView):
-    """
-    View to list all users in the system.
-
-    * Requires token authentication.
-    * Only admin users are able to access this view.
-    """
-
-    permission_classes = [
-        permissions.IsAdminUser,
-    ]
-
-    def get(self, format=None):
-        """
-        Return a list of all users.
-        """
-        print(self.request.user)
-        usernames = [user.username for user in User.objects.all()]
-        return Response(usernames)
-
-
 class CartView(APIView):
     authentication_classes = [authentication.TokenAuthentication]
 
