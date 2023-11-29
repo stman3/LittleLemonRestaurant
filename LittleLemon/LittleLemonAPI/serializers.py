@@ -9,7 +9,7 @@ class CategorySerializers(serializers.ModelSerializer):
         fields = ["id", "slug", "title"]
 
 
-class MunuItemSerializers(serializers.ModelSerializer):
+class MenuItemSerializers(serializers.ModelSerializer):
     category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
 
     class Meta:
