@@ -14,6 +14,8 @@ from .serializers import (
 )
 from .permissions import IsDelivery, IsCustomer, IsManager, IsDeliveryOrCustomer
 
+from django.views.decorators.csrf import csrf_exempt
+
 
 class CartView(APIView):
     model = Cart
@@ -65,7 +67,7 @@ class MenuItemsView(APIView):
 
 class MenuItemSingalView(APIView):
     model = MenuItem
-    qureyset = model.objects
+    queryset = model.objects
     serializer_class = MenuItemSerializers
     permission_classes = [permissions.IsAuthenticated]
 
@@ -78,7 +80,7 @@ class MenuItemSingalView(APIView):
     def get(self, request, *args, **kwargs):
         pk_value = kwargs.get("pk")
         try:
-            menu_item = self.qureyset.get(id=pk_value)
+            menu_item = self.queryset.get(id=pk_value)
             MenuItem_object = self.serializer_class(menu_item)
             return Response(MenuItem_object.data)
         except self.model.DoesNotExist:
@@ -88,7 +90,7 @@ class MenuItemSingalView(APIView):
 
     def put(self, reqeust, *args, **kwargs):
         try:
-            menu_item = self.qureyset.get(id=kwargs.get("pk"))
+            menu_item = self.queryset.get(id=kwargs.get("pk"))
         except self.model.DoesNotExist:
             return Response(
                 {"error": "Menu item is not found"}, status=status.HTTP_404_NOT_FOUND
@@ -101,7 +103,7 @@ class MenuItemSingalView(APIView):
 
     def patch(self, reqeust, *args, **kwargs):
         try:
-            menu_item = self.qureyset.get(id=kwargs.get("pk"))
+            menu_item = self.queryset.get(id=kwargs.get("pk"))
         except self.model.DoesNotExist:
             return Response(
                 {"error": "Menu item is not found"}, status=status.HTTP_404_NOT_FOUND
@@ -116,7 +118,7 @@ class MenuItemSingalView(APIView):
 
     def delete(self, reqeust, *args, **kwargs):
         try:
-            menu_item = self.qureyset.get(id=kwargs.get("pk"))
+            menu_item = self.queryset.get(id=kwargs.get("pk"))
         except self.model.DoesNotExist:
             return Response(
                 {"error": "Menu item is not found"}, status=status.HTTP_404_NOT_FOUND
@@ -128,16 +130,99 @@ class MenuItemSingalView(APIView):
 
 class GroupView(APIView):
     model = User
-    qureyset = model.objects
+    queryset = model.objects
     permission_classes = [IsManager]
     serializer_class = UserSerilializer
+    group = Group.objects.get(name="Manager")
 
     def get(self, request):
-        user = self.qureyset.filter(groups__name="Manager")
+        user = self.queryset.filter(groups__name="Manager")
         user_object = self.serializer_class(user, many=True)
 
         return Response(user_object.data)
 
+    def post(self, request):
+        usernameValue = request.data["username"]
+        try:
+            user = self.queryset.get(username=usernameValue)
+        except self.model.DoesNotExist:
+            return Response(
+                {"error": "User name  is not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        user.groups.add(self.group)
+        return Response("done", status=status.HTTP_200_OK)
+
 
 class GroupDetailView(APIView):
-    pass
+    model = User
+    queryset = model.objects
+    permission_classes = [IsManager]
+    serializer_class = UserSerilializer
+    group = Group.objects.get(name="Manager")
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            user = self.queryset.get(id=kwargs.get("pk"))
+        except self.model.DoesNotExist:
+            return Response(
+                {"error": "User name  is not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if user.groups.filter(name="Manager").exists():
+            user.groups.remove(self.group)
+
+            return Response("ok")
+
+        return Response(
+            {"error": "User is not Manger"}, status=status.HTTP_404_NOT_FOUND
+        )
+
+
+class DeliveryView(APIView):
+    model = User
+    queryset = model.objects
+    permission_classes = [IsManager]
+    serializer_class = UserSerilializer
+    group = Group.objects.get(name="delivery crew")
+
+    def get(self, request):
+        user = self.queryset.filter(groups__name="delivery crew")
+        user_object = self.serializer_class(user, many=True)
+
+        return Response(user_object.data)
+
+    def post(self, request):
+        usernameValue = request.data["username"]
+        try:
+            user = self.queryset.get(username=usernameValue)
+        except self.model.DoesNotExist:
+            return Response(
+                {"error": "User name  is not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+        user.groups.add(self.group)
+        return Response("done", status=status.HTTP_200_OK)
+
+
+class DeliveryDetailView(APIView):
+    model = User
+    queryset = model.objects
+    permission_classes = [IsManager]
+    serializer_class = UserSerilializer
+    group = Group.objects.get(name="delivery crew")
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            user = self.queryset.get(id=kwargs.get("pk"))
+        except self.model.DoesNotExist:
+            return Response(
+                {"error": "User name  is not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        if user.groups.filter(name="delivery crew").exists():
+            user.groups.remove(self.group)
+
+            return Response("ok")
+
+        return Response(
+            {"error": "User is not Manger"}, status=status.HTTP_404_NOT_FOUND
+        )
