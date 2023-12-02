@@ -2,7 +2,8 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import authentication, permissions
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
+
 from .models import Category, MenuItem, Cart, Order, OrderItem
 from .serializers import (
     CategorySerializers,
@@ -123,3 +124,20 @@ class MenuItemSingalView(APIView):
         MenuItem_oject = self.serializer_class(menu_item)
         menu_item.delete()
         return Response(MenuItem_oject.data, status=status.HTTP_200_OK)
+
+
+class GroupView(APIView):
+    model = User
+    qureyset = model.objects
+    permission_classes = [IsManager]
+    serializer_class = UserSerilializer
+
+    def get(self, request):
+        user = self.qureyset.filter(groups__name="Manager")
+        user_object = self.serializer_class(user, many=True)
+
+        return Response(user_object.data)
+
+
+class GroupDetailView(APIView):
+    pass
