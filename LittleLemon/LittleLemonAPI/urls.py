@@ -7,11 +7,19 @@ from .views import (
     GroupDetailView,
     DeliveryView,
     DeliveryDetailView,
+    OrderView,
+    OrderDetailView,
 )
 
 urlpatterns = [
-    path("menu-items/", MenuItemsView.as_view(), name="menu items view"),
-    path("cart/menu-items/", CartView.as_view(), name="CartView"),
+    path("menu-items", MenuItemsView.as_view(), name="menu items view"),
+    path("orders", OrderView.as_view(), name="order view"),
+    path(
+        "orders/<int:orderId>",
+        OrderDetailView.as_view(),
+        name="orders  singal",
+    ),
+    path("cart/menu-items", CartView.as_view(), name="CartView"),
     path(
         "menu-items/<int:pk>",
         MenuItemSingalView.as_view(),

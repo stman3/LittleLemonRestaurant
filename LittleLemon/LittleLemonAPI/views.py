@@ -3,7 +3,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import authentication, permissions
 from django.contrib.auth.models import User, Group
-
+from datetime import date
 from .models import Category, MenuItem, Cart, Order, OrderItem
 from .serializers import (
     CategorySerializers,
@@ -11,6 +11,7 @@ from .serializers import (
     CartSerializers,
     OrderItemSerializer,
     UserSerilializer,
+    OrderSerializers,
 )
 from .permissions import IsDelivery, IsCustomer, IsManager, IsDeliveryOrCustomer
 
@@ -26,7 +27,7 @@ class CartView(APIView):
     def get(self, request):
         cartuser = self.queryset.filter(user=request.user)
         cart_object = self.serializer_class(cartuser, many=True)
-        return Response(cart_object.data)
+        return Response(cart_object.data, status=status.HTTP_200_OK)
 
     def post(self, request):
         data = request.data.copy()
@@ -34,11 +35,11 @@ class CartView(APIView):
         cart_object = self.serializer_class(data=data)
         cart_object.is_valid(raise_exception=True)
         cart_object.save()
-        return Response(cart_object.data)
+        return Response(cart_object.data, status=status.HTTP_201_CREATED)
 
     def delete(self, request):
         self.queryset.filter(user=self.request.user).delete()
-        return Response("OK")
+        return Response("Cart have been delete it ", status=status.HTTP_200_OK)
 
 
 class MenuItemsView(APIView):
@@ -226,3 +227,160 @@ class DeliveryDetailView(APIView):
         return Response(
             {"error": "User is not Manger"}, status=status.HTTP_404_NOT_FOUND
         )
+
+
+class OrderView(APIView):
+    model = OrderItem
+    queryser = model.objects
+    serializer_class = OrderItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post_permissions(self):
+        if self.request.method == "POST":
+            return [IsCustomer()]
+        return super().get_permissions()
+
+    def post(self, request):
+        try:
+            Cartitem = Cart.objects.filter(user=request.user)
+            total = 0
+            if not Cartitem.exists:
+                return Response("no item in the Cart", status=status.HTTP_404_NOT_FOUND)
+            for cart in Cartitem:
+                total += cart.price
+            data = {
+                "user": request.user.id,
+                "total": total,
+                "status": False,
+                "date": date.today(),
+            }
+
+            order_serializer = OrderSerializers(data=data)
+            if order_serializer.is_valid(raise_exception=True):
+                order = order_serializer.save()
+                for item in Cartitem:
+                    menuitem = MenuItem.objects.get(id=item.menuitem_id)
+
+                    dataI = {
+                        "order": order.id,
+                        "menuitem": menuitem.pk,
+                        "quantity": item.quantity,
+                        "price": item.price,
+                    }
+                    orderitem_object = OrderItemSerializer(data=dataI)
+                    orderitem_object.is_valid(raise_exception=True)
+                    orderitem_object.save()
+
+                Cartitem.delete()
+            return Response(order_serializer.data, status=status.HTTP_201_CREATED)
+        except self.model.DoesNotExist:
+            return Response(
+                {"error": "User name  is not found"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+    def get(self, request):
+        try:
+            user = request.user
+
+            if IsManager().has_permission(request, self):
+                orders = Order.objects.all()
+            elif IsCustomer().has_permission(request, self):
+                orders = Order.objects.filter(user=user)
+            elif IsDelivery().has_permission(request, self):
+                orders = Order.objects.filter(delivery_crew=user)
+            else:
+                return Response(
+                    {"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN
+                )
+
+            serializer = OrderSerializers(orders, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Order.DoesNotExist:
+            return Response(
+                {"error": "User has no orders"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class OrderDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_order(self, order_id):
+        try:
+            order = Order.objects.get(id=order_id)
+            return order
+        except Order.DoesNotExist:
+            return None
+
+    def get(self, request, orderId):
+        try:
+            order = self.get_order(orderId)
+            if order and (
+                IsCustomer().has_object_permission(request, self, order)
+                or IsManager().has_permission(request, self)
+            ):
+                serializer = OrderSerializers(order)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(
+                {"error": "Order not found or permission denied"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def patch(self, request, orderId):
+        try:
+            order = self.get_order(orderId)
+            if order and IsDelivery().has_permission(request, self):
+                data = request.data
+                order.status = data.get("status", order.status)
+                order.save()
+                serializer = OrderSerializers(order)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(
+                {"error": "Order not found or permission denied"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def delete(self, request, orderId):
+        try:
+            order = self.get_order(orderId)
+            if order and IsManager().has_permission(request, self):
+                order.delete()
+                return Response(
+                    {"message": "Order deleted successfully"},
+                    status=status.HTTP_204_NO_CONTENT,
+                )
+            return Response(
+                {"error": "Order not found or permission denied"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def put(self, request, orderId):
+        try:
+            order = self.get_order(orderId)
+            if order and IsCustomer().has_object_permission(request, self, order):
+                data = request.data
+                order.delivery_crew = data.get("delivery_crew", order.delivery_crew)
+                order.status = data.get("status", order.status)
+                order.save()
+                serializer = OrderSerializers(order)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(
+                {"error": "Order not found or permission denied"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
