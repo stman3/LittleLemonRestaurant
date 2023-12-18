@@ -1,12 +1,62 @@
-Sure, I'll help you structure a README based on the information you provided. Please note that I'll format it as plain text. You can then use Markdown or any other formatting tool when you copy it into your GitHub repository. Here's a basic structure:
 
-```plaintext
+# Little Lemon Restaurant
+
+API project for the Little Lemon restaurant, designed for client application developers to build web and mobile applications. This API enables users with different roles to browse, add and edit menu items, place orders, browse orders, assign delivery crew to orders, and deliver orders.
+
+
 # Little Lemon Restaurant API
 
 API project for the Little Lemon restaurant, designed for client application developers to build web and mobile applications. This API enables users with different roles to browse, add and edit menu items, place orders, browse orders, assign delivery crew to orders, and deliver orders.
 
-## Installation
+# API Reference
 
+## Menu-items endpoints
+
+| Endpoint                      | Role                       | Method                         | Description                                           |
+| :---------------------------- | :------------------------- | :----------------------------- | :---------------------------------------------------- |
+| `/api/menu-items`             | Customer, delivery crew    | `GET`                          | Lists all menu items. Return a 200 – Ok HTTP status code. |
+| `/api/menu-items`             | Customer, delivery crew    | `POST, PUT, PATCH, DELETE`     | Denies access and returns 403 – Unauthorized HTTP status code. |
+| `/api/menu-items/{menuItem}`  | Customer, delivery crew    | `GET`                          | Lists single menu item.                                |
+| `/api/menu-items/{menuItem}`  | Customer, delivery crew    | `POST, PUT, PATCH, DELETE`     | Returns 403 - Unauthorized.                            |
+| `/api/menu-items`             | Customer, delivery crew    | `POST, PUT, PATCH, DELETE`     | Returns 403 - Unauthorized.                            |
+
+## User Group Management endpoints
+
+| Endpoint                               | Role     | Method                         | Purpose                                                     |
+| :------------------------------------- | :------- | :----------------------------- | :---------------------------------------------------------- |
+| `/api/groups/manager/users`            | Manager  | `GET`                          | Returns all managers.                                       |
+| `/api/groups/manager/users`            | Manager  | `POST`                         | Assigns the user in the payload to the manager group and returns 201-Created. |
+| `/api/groups/manager/users/{userId}`   | Manager  | `DELETE`                       | Removes this particular user from the manager group and returns 200 – Success if everything is okay. If the user is not found, returns 404 – Not found. |
+| `/api/groups/delivery-crew/users`      | Manager  | `GET`                          | Returns all delivery crew.                                  |
+| `/api/groups/delivery-crew/users`      | Manager  | `POST`                         | Assigns the user in the payload to the delivery crew group and returns 201-Created. |
+| `/api/groups/delivery-crew/users/{userId}` | Manager | `DELETE`                    | Removes this user from the manager group and returns 200 – Success if everything is okay. If the user is not found, returns 404 – Not found. |
+
+## Cart Management endpoints
+
+| Endpoint                           | Role     | Method                         | Purpose                                                     |
+| :--------------------------------- | :------- | :----------------------------- | :---------------------------------------------------------- |
+| `/api/cart/menu-items`             | Customer | `GET`                          | Returns current items in the cart for the current user token. |
+| `/api/cart/menu-items`             | Customer | `POST`                         | Adds the menu item to the cart. Sets the authenticated user as the user id for these cart items. |
+| `/api/cart/menu-items`             | Customer | `DELETE`                       | Deletes all menu items created by the current user token.   |
+
+## Order Management endpoints
+
+| Endpoint                           | Role           | Method                         | Purpose                                                     |
+| :--------------------------------- | :------------- | :----------------------------- | :---------------------------------------------------------- |
+| `/api/orders`                      | Customer       | `GET`                          | Returns all orders with order items created by this user.   |
+| `/api/orders`                      | Customer       | `POST`                         | Creates a new order item for the current user. Gets current cart items from the cart endpoints and adds those items to the order items table. Then deletes all items from the cart for this user. |
+| `/api/orders/{orderId}`            | Customer       | `GET`                          | Returns all items for this order id. If the order ID doesn’t belong to the current user, it displays an appropriate HTTP error status code. |
+| `/api/orders`                      | Manager         | `GET`                          | Returns all orders with order items by all users.           |
+| `/api/orders/{orderId}`            | Customer       | `PUT, PATCH`                   | Updates the order. A manager can use this endpoint to set a delivery crew to this order, and also update the order status to 0 or 1. If a delivery crew is assigned to this order and the status = 0, it means the order is out for delivery. If a delivery crew is assigned to this order and the status = 1, it means the order has been delivered. |
+| `/api/orders/{orderId}`            | Manager         | `DELETE`                       | Deletes this order.                                         |
+| `/api/orders`                      | Delivery crew   | `GET`                          | Returns all orders with order items assigned to the delivery crew. |
+| `/api/orders/{orderId}`            | Delivery crew   | `PATCH`                        | A delivery crew can use this endpoint to update the order status to 0 or 1. The delivery crew will not be able to update anything else in this order. |
+
+
+
+
+## Installation
+```plaintext
 ```bash
 cd LittleLemon
 pipenv shell
@@ -16,135 +66,4 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-## API Endpoints
 
-### User Registration and Token Generation
-
-- **POST /api/users**
-  - Role: No role required
-  - Purpose: Creates a new user with name, email, and password.
-
-- **GET /api/users/users/me/**
-  - Role: Anyone with a valid user token
-  - Purpose: Displays only the current user.
-
-- **POST /token/login/**
-  - Role: Anyone with a valid username and password
-  - Purpose: Generates access tokens for other API calls in this project.
-
-### Menu Items
-
-- **GET /api/menu-items**
-  - Role: Customer, delivery crew
-  - Purpose: Lists all menu items.
-
-- **POST, PUT, PATCH, DELETE /api/menu-items**
-  - Role: Customer, delivery crew
-  - Purpose: Denies access and returns 403 – Unauthorized HTTP status code.
-
-- **GET /api/menu-items/{menuItem}**
-  - Role: Customer, delivery crew
-  - Purpose: Lists a single menu item.
-
-- **GET /api/menu-items**
-  - Role: Manager
-  - Purpose: Lists all menu items.
-
-- **POST /api/menu-items**
-  - Role: Manager
-  - Purpose: Creates a new menu item.
-
-- **GET /api/menu-items/{menuItem}**
-  - Role: Manager
-  - Purpose: Lists a single menu item.
-
-- **PUT, PATCH /api/menu-items/{menuItem}**
-  - Role: Manager
-  - Purpose: Updates a single menu item.
-
-- **DELETE /api/menu-items/{menuItem}**
-  - Role: Manager
-  - Purpose: Deletes a menu item.
-
-### User Group Management
-
-- **GET /api/groups/manager/users**
-  - Role: Manager
-  - Purpose: Returns all managers.
-
-- **POST /api/groups/manager/users**
-  - Role: Manager
-  - Purpose: Assigns the user in the payload to the manager group.
-
-- **DELETE /api/groups/manager/users/{userId}**
-  - Role: Manager
-  - Purpose: Removes a user from the manager group.
-
-- **GET /api/groups/delivery-crew/users**
-  - Role: Manager
-  - Purpose: Returns all delivery crew.
-
-- **POST /api/groups/delivery-crew/users**
-  - Role: Manager
-  - Purpose: Assigns the user in the payload to the delivery crew group.
-
-- **DELETE /api/groups/delivery-crew/users/{userId}**
-  - Role: Manager
-  - Purpose: Removes a user from the delivery crew group.
-
-### Cart Management
-
-- **GET /api/cart/menu-items**
-  - Role: Customer
-  - Purpose: Returns current items in the cart for the current user token.
-
-- **POST /api/cart/menu-items**
-  - Role: Customer
-  - Purpose: Adds a menu item to the cart.
-
-- **DELETE /api/cart/menu-items**
-  - Role: Customer
-  - Purpose: Deletes all menu items created by the current user token.
-
-### Order Management
-
-- **GET /api/orders**
-  - Role: Customer
-  - Purpose: Returns all orders with order items created by this user.
-
-- **POST /api/orders**
-  - Role: Customer
-  - Purpose: Creates a new order item for the current user.
-
-- **GET /api/orders/{orderId}**
-  - Role: Customer
-  - Purpose: Returns all items for this order id.
-
-- **GET /api/orders**
-  - Role: Manager
-  - Purpose: Returns all orders with order items by all users.
-
-- **PUT, PATCH /api/orders/{orderId}**
-  - Role: Customer
-  - Purpose: Updates the order.
-
-- **DELETE /api/orders/{orderId}**
-  - Role: Manager
-  - Purpose: Deletes an order.
-
-- **GET /api/orders**
-  - Role: Delivery crew
-  - Purpose: Returns all orders with order items assigned to the delivery crew.
-
-- **PATCH /api/orders/{orderId}**
-  - Role: Delivery crew
-  - Purpose: Updates the order status.
-
-### Notes
-
-- You can use Djoser for user registration and token generation.
-- Refer to the [Introduction to Djoser library for better authentication video](#) for additional endpoints.
-
-```
-
-Feel free to adjust the formatting, add more details, or modify it according to your needs.
