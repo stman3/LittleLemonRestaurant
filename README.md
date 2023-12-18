@@ -57,7 +57,7 @@ API project for the Little Lemon restaurant, designed for client application dev
 
 ## Installation
 ```plaintext
-```bash
+bash
 cd LittleLemon
 pipenv shell
 pipenv install
